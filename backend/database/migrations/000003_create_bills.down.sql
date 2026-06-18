@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS bill_items;
+DROP TABLE IF EXISTS bills;
