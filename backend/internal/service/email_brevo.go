@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -101,7 +102,12 @@ func (s *BrevoEmailSender) sendMail(toEmail, toName, subject, htmlBody string) e
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		log.Error().Int("status", resp.StatusCode).Str("to", toEmail).Msg("Brevo API returned error")
+		var errorBody string
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err == nil {
+			errorBody = string(bodyBytes)
+		}
+		log.Error().Int("status", resp.StatusCode).Str("to", toEmail).Str("response", errorBody).Msg("Brevo API returned error")
 		return fmt.Errorf("brevo API returned error status: %d", resp.StatusCode)
 	}
 
