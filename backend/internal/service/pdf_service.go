@@ -221,6 +221,9 @@ func (s *PDFService) GenerateInvoicePDF(bill *domain.Bill, settings *domain.Shop
 		),
 	)
 
+	// Gap
+	m.AddRows(row.New(15))
+
 	// Terms & Conditions
 	m.AddRows(
 		row.New(4).Add(col.New(12).Add(text.New("Terms & Conditions:", props.Text{Style: fontstyle.Bold, Size: 8}))),
