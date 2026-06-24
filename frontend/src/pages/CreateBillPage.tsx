@@ -67,7 +67,7 @@ export default function CreateBillPage() {
         }
         
         toast.success("Estimate details loaded. You can now adjust weights and prices.");
-      }).catch((err) => {
+      }).catch(() => {
         toast.error("Failed to load estimate for conversion.");
       });
     }
