@@ -57,6 +57,10 @@ func (s *BrevoEmailSender) SendPasswordResetEmail(to, name, token string) error 
 }
 
 func (s *BrevoEmailSender) sendMail(toEmail, toName, subject, htmlBody string) error {
+	if toName == "" {
+		toName = "Customer"
+	}
+
 	// Brevo API expects this exact payload structure
 	payload := map[string]interface{}{
 		"sender": map[string]string{
