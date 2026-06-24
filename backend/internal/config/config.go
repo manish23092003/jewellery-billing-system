@@ -36,6 +36,9 @@ type Config struct {
 	SMTPPassword string
 	SMTPFrom     string
 
+	// Resend (Email API)
+	ResendAPIKey string
+
 	// Application
 	AppURL string
 }
@@ -78,6 +81,7 @@ func Load() (*Config, error) {
 		SMTPUser:            getEnv("SMTP_USER", ""),
 		SMTPPassword:        getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:            getEnv("SMTP_FROM", "noreply@jewellery-billing.com"),
+		ResendAPIKey:        getEnv("RESEND_API_KEY", ""),
 		AppURL:              getEnv("APP_URL", "http://localhost:5173"),
 	}, nil
 }

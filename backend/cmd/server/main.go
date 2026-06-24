@@ -60,9 +60,12 @@ func main() {
 	verificationLogRepo := repository.NewVerificationLogRepository(pool)
 	_ = repository.NewAuditRepository(pool) // Available for future use
 
-	// Email Sender — use SMTP if configured, otherwise console logger
+	// ── 4. Initialize Email Sender ───────────
 	var emailSender service.EmailSender
-	if cfg.IsSMTPConfigured() {
+	if cfg.ResendAPIKey != "" {
+		emailSender = service.NewResendEmailSender(cfg)
+		log.Info().Msg("✓ Using Resend API email sender")
+	} else if cfg.IsSMTPConfigured() {
 		emailSender = service.NewSMTPEmailSender(cfg)
 		log.Info().Msg("✓ Using SMTP email sender")
 	} else {
