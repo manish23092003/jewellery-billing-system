@@ -296,7 +296,7 @@ export default function BillHistoryPage() {
                   max={selectedBillForPayment.balance_due}
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="bg-muted border-border text-white text-lg font-bold"
+                  className="bg-muted border-border text-foreground text-lg font-bold"
                 />
               </div>
               <div className="pt-4 flex justify-end gap-3">

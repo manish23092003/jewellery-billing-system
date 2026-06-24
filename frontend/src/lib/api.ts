@@ -8,7 +8,7 @@ import axios from "axios";
  * - Intercepts 401 responses and redirects to /login
  */
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   headers: {
     "Content-Type": "application/json",
     "Cache-Control": "no-cache",
@@ -42,7 +42,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem("refresh_token");
       if (refreshToken) {
         try {
-          const { data } = await axios.post("/api/auth/refresh", {
+          const { data } = await axios.post(`${import.meta.env.VITE_API_URL || "/api"}/auth/refresh`, {
             refresh_token: refreshToken,
           });
 
