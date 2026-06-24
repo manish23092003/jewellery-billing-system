@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSettings, updateSettings, uploadLogo } from "@/lib/settings.api";
-import { Loader2, UploadCloud, Image as ImageIcon } from "lucide-react";
+import { Loader2, UploadCloud, Image as ImageIcon, Moon, Sun, Monitor } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme } = useTheme();
   
   const [formData, setFormData] = useState({
     shop_name: "",
@@ -76,16 +78,55 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight text-[#c6a962]">
-        Shop Settings
+        Settings
       </h1>
 
-      <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20">
+      <Card className="bg-card backdrop-blur-md border-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-gray-200">Shop Logo</CardTitle>
+          <CardTitle className="text-foreground">Appearance</CardTitle>
+          <p className="text-sm text-muted-foreground">Customize how the application looks on your device.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-4">
+            <label className="text-sm font-medium text-foreground">Theme Preference</label>
+            <div className="flex flex-wrap gap-4">
+              <Button 
+                variant={theme === "light" ? "default" : "outline"}
+                className={theme === "light" ? "bg-[#c6a962] text-white hover:bg-[#b0965a]" : "border-border text-foreground hover:bg-muted"}
+                onClick={() => setTheme("light")}
+              >
+                <Sun className="mr-2 h-4 w-4" />
+                Light
+              </Button>
+              <Button 
+                variant={theme === "dark" ? "default" : "outline"}
+                className={theme === "dark" ? "bg-[#c6a962] text-white hover:bg-[#b0965a]" : "border-border text-foreground hover:bg-muted"}
+                onClick={() => setTheme("dark")}
+              >
+                <Moon className="mr-2 h-4 w-4" />
+                Dark
+              </Button>
+              <Button 
+                variant={theme === "system" ? "default" : "outline"}
+                className={theme === "system" ? "bg-[#c6a962] text-white hover:bg-[#b0965a]" : "border-border text-foreground hover:bg-muted"}
+                onClick={() => setTheme("system")}
+              >
+                <Monitor className="mr-2 h-4 w-4" />
+                System
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card backdrop-blur-md border-[#c6a962]/20 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-foreground">Shop Logo</CardTitle>
+          <p className="text-sm text-muted-foreground">Upload a logo to display on the dashboard and your PDF invoices.</p>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-6">
-            <div className="h-24 w-24 rounded-lg bg-black/50 border border-gray-700 flex items-center justify-center overflow-hidden">
+            <div className="h-24 w-24 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
               {settings?.logo_path ? (
                 <img 
                   src={`http://localhost:8080${settings.logo_path}`} 
@@ -93,14 +134,10 @@ export default function SettingsPage() {
                   className="h-full w-full object-contain"
                 />
               ) : (
-                <ImageIcon className="h-8 w-8 text-gray-500" />
+                <ImageIcon className="h-8 w-8 text-muted-foreground" />
               )}
             </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-400">
-                Upload a logo to display on the dashboard and your PDF invoices. <br />
-                Recommended format: PNG, JPG, or JPEG.
-              </p>
+            <div className="space-y-2 flex-1">
               <input 
                 type="file" 
                 accept=".png,.jpg,.jpeg" 
@@ -121,66 +158,70 @@ export default function SettingsPage() {
                 )}
                 Upload New Logo
               </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Recommended format: PNG, JPG, or JPEG. Max size 2MB.
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20">
+      <Card className="bg-card backdrop-blur-md border-[#c6a962]/20 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-gray-200">General Details</CardTitle>
+          <CardTitle className="text-foreground">General Details</CardTitle>
+          <p className="text-sm text-muted-foreground">Update your shop information and billing details.</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm text-gray-400">Shop Name</label>
+                <label className="text-sm font-medium text-muted-foreground">Shop Name</label>
                 <Input 
                   required
                   value={formData.shop_name} 
                   onChange={(e) => setFormData({...formData, shop_name: e.target.value})}
-                  className="bg-black/50 border-gray-700 text-gray-200" 
+                  className="bg-muted border-border text-foreground" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-gray-400">GSTIN</label>
+                <label className="text-sm font-medium text-muted-foreground">GSTIN</label>
                 <Input 
                   value={formData.gstin} 
                   onChange={(e) => setFormData({...formData, gstin: e.target.value})}
-                  className="bg-black/50 border-gray-700 text-gray-200" 
+                  className="bg-muted border-border text-foreground" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-gray-400">Phone Number</label>
+                <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
                 <Input 
                   required
                   value={formData.phone} 
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="bg-black/50 border-gray-700 text-gray-200" 
+                  className="bg-muted border-border text-foreground" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-gray-400">Invoice Prefix</label>
+                <label className="text-sm font-medium text-muted-foreground">Invoice Prefix</label>
                 <Input 
                   required
                   value={formData.invoice_prefix} 
                   onChange={(e) => setFormData({...formData, invoice_prefix: e.target.value})}
-                  className="bg-black/50 border-gray-700 text-gray-200" 
+                  className="bg-muted border-border text-foreground" 
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
-                <label className="text-sm text-gray-400">Shop Address</label>
+                <label className="text-sm font-medium text-muted-foreground">Shop Address</label>
                 <Input 
                   required
                   value={formData.address} 
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="bg-black/50 border-gray-700 text-gray-200" 
+                  className="bg-muted border-border text-foreground" 
                 />
               </div>
             </div>
             
-            <div className="flex justify-end">
-              <Button type="submit" disabled={mutation.isPending}>
+            <div className="flex justify-end pt-4 border-t border-border mt-6">
+              <Button type="submit" disabled={mutation.isPending} className="bg-[#c6a962] hover:bg-[#b0965a] text-black font-semibold">
                 {mutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>

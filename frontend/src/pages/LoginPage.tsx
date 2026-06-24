@@ -49,7 +49,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* ── Left Panel: Branding ──────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460]">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-background via-muted/50 to-muted">
         {/* Animated gold pattern overlay */}
         <div className="absolute inset-0 opacity-10">
           <div
@@ -167,12 +167,21 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground"
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-xs font-medium text-[#c6a962] hover:text-[#e5c77d] transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <input
                   id="password"
@@ -227,19 +236,21 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Footer hint */}
-          <div className="mt-8 p-4 rounded-lg bg-muted/50 border border-border/50">
-            <p className="text-xs text-muted-foreground text-center">
-              <span className="font-semibold text-foreground/70">
-                Demo credentials:
-              </span>{" "}
-              admin@jewellery.com / Admin@123
+          {/* Footer links */}
+          <div className="mt-8 text-center space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <button
+                onClick={() => navigate("/register")}
+                className="font-medium text-[#c6a962] hover:text-[#e5c77d] transition-colors"
+              >
+                Register your business
+              </button>
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              © {new Date().getFullYear()} Jewellery Billing System
             </p>
           </div>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground/60">
-            © {new Date().getFullYear()} Jewellery Billing System
-          </p>
         </div>
       </div>
     </div>

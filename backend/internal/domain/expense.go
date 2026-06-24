@@ -8,13 +8,14 @@ import (
 
 // Expense represents a daily shop expenditure.
 type Expense struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Category    string    `json:"category" db:"category"`
-	Amount      float64   `json:"amount" db:"amount"`
-	Description string    `json:"description" db:"description"`
-	ExpenseDate string    `json:"expense_date" db:"expense_date"`
-	CreatedBy   uuid.UUID `json:"created_by" db:"created_by"`
-	CreatedAt   string    `json:"created_at" db:"created_at"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	OrganizationID uuid.UUID `json:"organization_id" db:"organization_id"`
+	Category       string    `json:"category" db:"category"`
+	Amount         float64   `json:"amount" db:"amount"`
+	Description    string    `json:"description" db:"description"`
+	ExpenseDate    string    `json:"expense_date" db:"expense_date"`
+	CreatedBy      uuid.UUID `json:"created_by" db:"created_by"`
+	CreatedAt      string    `json:"created_at" db:"created_at"`
 }
 
 // CreateExpenseRequest is the payload to create an expense.
@@ -37,6 +38,6 @@ type ExpenseFilter struct {
 // ExpenseRepository handles persistent storage operations for expenses.
 type ExpenseRepository interface {
 	Create(ctx context.Context, expense *Expense) error
-	GetAll(ctx context.Context, filter ExpenseFilter) ([]Expense, int64, error)
-	Delete(ctx context.Context, id uuid.UUID) error
+	GetAll(ctx context.Context, orgID uuid.UUID, filter ExpenseFilter) ([]Expense, int64, error)
+	Delete(ctx context.Context, orgID, id uuid.UUID) error
 }

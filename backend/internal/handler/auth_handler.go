@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"jewellery-billing/internal/apiresponse"
 	"jewellery-billing/internal/domain"
 	"jewellery-billing/internal/service"
-	"jewellery-billing/internal/apiresponse"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -12,15 +12,15 @@ import (
 // AuthHandler exposes HTTP endpoints for authentication.
 type AuthHandler struct {
 	authService *service.AuthService
+	orgRepo     domain.OrganizationRepository
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *service.AuthService, orgRepo domain.OrganizationRepository) *AuthHandler {
+	return &AuthHandler{authService: authService, orgRepo: orgRepo}
 }
 
 // Login godoc
 // POST /api/auth/login
-// Accepts {email, password} and returns JWT token pair + user info.
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req domain.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -41,7 +41,6 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 // RefreshToken godoc
 // POST /api/auth/refresh
-// Accepts {refresh_token} and returns a new token pair.
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	var req domain.RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -62,8 +61,6 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 
 // Logout godoc
 // POST /api/auth/logout (protected)
-// Client-side logout — the server acknowledges the request.
-// A production system would blacklist the token in Redis.
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	return apiresponse.Success(c, fiber.StatusOK, fiber.Map{
 		"message": "Logged out successfully",
@@ -72,18 +69,25 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 
 // Me godoc
 // GET /api/auth/me (protected)
-// Returns the currently authenticated user's profile.
 func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	userID, _ := c.Locals("userID").(uuid.UUID)
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
 	email, _ := c.Locals("email").(string)
 	role, _ := c.Locals("role").(domain.UserRole)
-	name, _ := c.Locals("name").(string)
+
+	// Fetch organization details
+	org, _ := h.orgRepo.GetByID(c.Context(), orgID)
+	var orgResponse *domain.OrganizationResponse
+	if org != nil {
+		resp := org.ToResponse()
+		orgResponse = &resp
+	}
 
 	return apiresponse.Success(c, fiber.StatusOK, fiber.Map{
-		"id":    userID,
-		"name":  name,
-		"email": email,
-		"role":  role,
+		"id":              userID,
+		"organization_id": orgID,
+		"email":           email,
+		"role":            role,
+		"organization":    orgResponse,
 	})
 }
-

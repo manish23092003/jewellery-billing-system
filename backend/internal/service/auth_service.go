@@ -15,22 +15,25 @@ import (
 
 // JWTClaims extends the standard JWT claims with application-specific fields.
 type JWTClaims struct {
-	UserID uuid.UUID       `json:"user_id"`
-	Email  string          `json:"email"`
-	Role   domain.UserRole `json:"role"`
+	UserID         uuid.UUID       `json:"user_id"`
+	OrganizationID uuid.UUID       `json:"organization_id"`
+	Email          string          `json:"email"`
+	Role           domain.UserRole `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // AuthService handles login, token generation, and token validation.
 type AuthService struct {
 	userRepo domain.UserRepository
+	orgRepo  domain.OrganizationRepository
 	config   *config.Config
 }
 
 // NewAuthService creates an AuthService with the given dependencies.
-func NewAuthService(userRepo domain.UserRepository, cfg *config.Config) *AuthService {
+func NewAuthService(userRepo domain.UserRepository, orgRepo domain.OrganizationRepository, cfg *config.Config) *AuthService {
 	return &AuthService{
 		userRepo: userRepo,
+		orgRepo:  orgRepo,
 		config:   cfg,
 	}
 }
@@ -44,11 +47,21 @@ func (s *AuthService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
+	// Check if user is active
+	if !user.IsActive {
+		return nil, fmt.Errorf("account is deactivated")
+	}
+
 	// Compare the supplied password against the stored bcrypt hash.
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, fmt.Errorf("invalid email or password")
 	}
 
+	return s.GenerateAuthResponse(ctx, user)
+}
+
+// GenerateAuthResponse creates tokens and fetches org data for a user.
+func (s *AuthService) GenerateAuthResponse(ctx context.Context, user *domain.User) (*domain.AuthResponse, error) {
 	// Generate token pair.
 	accessToken, err := s.generateToken(user, time.Duration(s.config.JWTAccessExpiryMin)*time.Minute)
 	if err != nil {
@@ -60,10 +73,17 @@ func (s *AuthService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
+	// Fetch organization details
+	org, err := s.orgRepo.GetByID(ctx, user.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch organization: %w", err)
+	}
+
 	return &domain.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         user.ToResponse(),
+		Organization: org.ToResponse(),
 	}, nil
 }
 
@@ -80,21 +100,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 		return nil, fmt.Errorf("user no longer exists")
 	}
 
-	newAccess, err := s.generateToken(user, time.Duration(s.config.JWTAccessExpiryMin)*time.Minute)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	if !user.IsActive {
+		return nil, fmt.Errorf("account is deactivated")
 	}
 
-	newRefresh, err := s.generateToken(user, time.Duration(s.config.JWTRefreshExpiryDay)*24*time.Hour)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	return &domain.AuthResponse{
-		AccessToken:  newAccess,
-		RefreshToken: newRefresh,
-		User:         user.ToResponse(),
-	}, nil
+	return s.GenerateAuthResponse(ctx, user)
 }
 
 // ValidateToken parses and validates a JWT string, returning its claims.
@@ -121,9 +131,10 @@ func (s *AuthService) ValidateToken(tokenString string) (*JWTClaims, error) {
 // generateToken creates a signed JWT with the given expiry duration.
 func (s *AuthService) generateToken(user *domain.User, expiry time.Duration) (string, error) {
 	claims := JWTClaims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
+		UserID:         user.ID,
+		OrganizationID: user.OrganizationID,
+		Email:          user.Email,
+		Role:           user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -133,4 +144,31 @@ func (s *AuthService) generateToken(user *domain.User, expiry time.Duration) (st
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.config.JWTSecret))
+}
+
+// VerifyEmail validates an email verification token and marks the user as verified.
+func (s *AuthService) VerifyEmail(ctx context.Context, tokenRepo domain.TokenRepository, tokenStr string) error {
+	token, err := tokenRepo.GetEmailVerificationByToken(ctx, tokenStr)
+	if err != nil {
+		return fmt.Errorf("invalid verification token")
+	}
+
+	if time.Now().After(token.ExpiresAt) {
+		return fmt.Errorf("verification token has expired")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, token.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
+
+	user.EmailVerified = true
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("failed to verify email: %w", err)
+	}
+
+	// Clean up tokens
+	_ = tokenRepo.DeleteEmailVerificationByUser(ctx, user.ID)
+
+	return nil
 }

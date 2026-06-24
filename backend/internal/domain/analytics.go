@@ -1,6 +1,10 @@
 package domain
 
-import "context"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 // DashboardMetrics represents the high-level summary cards.
 type DashboardMetrics struct {
@@ -28,6 +32,6 @@ type DashboardData struct {
 
 // AnalyticsRepository handles complex aggregation queries.
 type AnalyticsRepository interface {
-	GetDashboardMetrics(ctx context.Context, today, firstDayOfMonth string) (*DashboardMetrics, error)
-	GetMonthlyTrends(ctx context.Context, firstDayOfMonth, lastDayOfMonth string) ([]DailyTrend, error)
+	GetDashboardMetrics(ctx context.Context, orgID uuid.UUID, today, firstDayOfMonth string) (*DashboardMetrics, error)
+	GetMonthlyTrends(ctx context.Context, orgID uuid.UUID, firstDayOfMonth, lastDayOfMonth string) ([]DailyTrend, error)
 }

@@ -44,12 +44,13 @@ func IsValidPurity(mt MetalType, purity string) bool {
 // ── MetalRate Entity ───────────────────────────────────────────────────
 
 type MetalRate struct {
-	ID            uuid.UUID `json:"id"`
-	MetalType     MetalType `json:"metal_type"`
-	Purity        string    `json:"purity"`
-	RatePerGram   float64   `json:"rate_per_gram"`
-	EffectiveDate string    `json:"effective_date"` // YYYY-MM-DD
-	CreatedAt     time.Time `json:"created_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	MetalType      MetalType `json:"metal_type"`
+	Purity         string    `json:"purity"`
+	RatePerGram    float64   `json:"rate_per_gram"`
+	EffectiveDate  string    `json:"effective_date"` // YYYY-MM-DD
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // ── Request DTOs ───────────────────────────────────────────────────────
@@ -70,14 +71,14 @@ type UpdateMetalRateRequest struct {
 
 type MetalRateRepository interface {
 	Create(ctx context.Context, rate *MetalRate) error
-	GetByID(ctx context.Context, id uuid.UUID) (*MetalRate, error)
+	GetByID(ctx context.Context, orgID, id uuid.UUID) (*MetalRate, error)
 	Update(ctx context.Context, rate *MetalRate) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, orgID, id uuid.UUID) error
 
 	// GetCurrentRates returns the latest rate for each metal_type + purity
-	// combination where effective_date <= today.
-	GetCurrentRates(ctx context.Context) ([]MetalRate, error)
+	// combination where effective_date <= today, scoped to the organization.
+	GetCurrentRates(ctx context.Context, orgID uuid.UUID) ([]MetalRate, error)
 
 	// GetHistory returns paginated rate history, optionally filtered by metal type.
-	GetHistory(ctx context.Context, metalType string, limit, offset int) ([]MetalRate, int64, error)
+	GetHistory(ctx context.Context, orgID uuid.UUID, metalType string, limit, offset int) ([]MetalRate, int64, error)
 }

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSettings } from "@/lib/settings.api";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, organization, logout } = useAuth();
   const location = useLocation();
 
   const { data: settings } = useQuery({
@@ -13,8 +13,8 @@ export default function Layout() {
     queryFn: getSettings,
   });
 
-  const shopName = settings?.shop_name || "Aura Jewels";
-  const shopShortName = shopName.split(" ")[0] || "Aura";
+  const shopName = settings?.shop_name || organization?.business_name || "Jewellery Billing";
+  const shopShortName = shopName.split(" ")[0] || "Jewellery";
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -24,16 +24,17 @@ export default function Layout() {
     { name: "Dashboard", path: "/" },
     { name: "Create Invoice", path: "/bills/new" },
     { name: "Invoice History", path: "/bills/history" },
+    { name: "Customers", path: "/customers" },
     { name: "Metal Rates", path: "/metal-rates" },
     { name: "Expenses", path: "/expenses" },
     { name: "Settings", path: "/settings" },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-[#c6a962]/20 bg-black/40 backdrop-blur-xl flex flex-col hidden md:flex">
-        <div className="h-16 flex items-center px-6 border-b border-[#c6a962]/20 space-x-3">
+      <aside className="w-64 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col hidden md:flex">
+        <div className="h-16 flex items-center px-6 border-b border-border space-x-3">
           {settings?.logo_path && (
             <img 
               src={`http://localhost:8080${settings.logo_path}`} 
@@ -41,7 +42,7 @@ export default function Layout() {
               className="h-8 w-8 object-contain"
             />
           )}
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a962] to-[#f3e5c0] truncate">
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a962] to-[#b8882a] dark:to-[#f3e5c0] truncate">
             {shopName}
           </span>
         </div>
@@ -55,7 +56,7 @@ export default function Layout() {
                 className={`block px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? "bg-gradient-to-r from-[#c6a962]/20 to-transparent text-[#c6a962] font-semibold border-l-2 border-[#c6a962]"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
                 }`}
               >
                 {item.name}
@@ -63,19 +64,19 @@ export default function Layout() {
             );
           })}
         </div>
-        <div className="p-4 border-t border-[#c6a962]/20">
+        <div className="p-4 border-t border-border">
           <div className="flex items-center space-x-3 mb-4 px-2">
-            <div className="w-8 h-8 rounded-full bg-[#c6a962] text-black flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-full bg-[#c6a962] text-white flex items-center justify-center font-bold">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-200">{user.name}</p>
-              <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              <p className="text-sm font-medium text-foreground">{user.name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
             </div>
           </div>
           <Button
             variant="outline"
-            className="w-full border-gray-700 text-gray-300 bg-transparent hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/50"
+            className="w-full border-border text-foreground bg-transparent hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
             onClick={logout}
           >
             Logout
@@ -86,7 +87,7 @@ export default function Layout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
-        <header className="h-16 border-b border-[#c6a962]/20 bg-black/40 backdrop-blur-md flex items-center justify-between px-6 md:hidden">
+        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 md:hidden">
           <div className="flex items-center space-x-2">
             {settings?.logo_path && (
               <img 
@@ -95,11 +96,11 @@ export default function Layout() {
                 className="h-8 w-8 object-contain"
               />
             )}
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a962] to-[#f3e5c0] truncate">
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a962] to-[#b8882a] dark:to-[#f3e5c0] truncate">
               {shopShortName}
             </span>
           </div>
-          <Button variant="ghost" onClick={logout} className="text-gray-400">
+          <Button variant="ghost" onClick={logout} className="text-muted-foreground">
             Logout
           </Button>
         </header>
@@ -109,7 +110,9 @@ export default function Layout() {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#c6a962]/5 rounded-full blur-[120px] pointer-events-none"></div>
           
           <div className="relative z-10">
-            <Outlet />
+            <div className="p-6">
+              <Outlet />
+            </div>
           </div>
         </div>
       </main>

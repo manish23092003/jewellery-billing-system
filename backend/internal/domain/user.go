@@ -26,24 +26,30 @@ func (r UserRole) IsValid() bool {
 
 // User is the core domain entity representing a system user.
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"` // never serialized to JSON
-	Role         UserRole  `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Email          string    `json:"email"`
+	PasswordHash   string    `json:"-"` // never serialized to JSON
+	Role           UserRole  `json:"role"`
+	IsActive       bool      `json:"is_active"`
+	EmailVerified  bool      `json:"email_verified"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // ToResponse strips sensitive fields and returns a safe projection.
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{
-		ID:        u.ID,
-		Name:      u.Name,
-		Email:     u.Email,
-		Role:      u.Role,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		ID:             u.ID,
+		OrganizationID: u.OrganizationID,
+		Name:           u.Name,
+		Email:          u.Email,
+		Role:           u.Role,
+		IsActive:       u.IsActive,
+		EmailVerified:  u.EmailVerified,
+		CreatedAt:      u.CreatedAt,
+		UpdatedAt:      u.UpdatedAt,
 	}
 }
 
@@ -73,18 +79,22 @@ type RefreshRequest struct {
 }
 
 type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Role      UserRole  `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Email          string    `json:"email"`
+	Role           UserRole  `json:"role"`
+	IsActive       bool      `json:"is_active"`
+	EmailVerified  bool      `json:"email_verified"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type AuthResponse struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	User         UserResponse `json:"user"`
+	AccessToken  string               `json:"access_token"`
+	RefreshToken string               `json:"refresh_token"`
+	User         UserResponse         `json:"user"`
+	Organization OrganizationResponse `json:"organization"`
 }
 
 // ── Repository Interface ───────────────────────────────────────────────
@@ -95,8 +105,8 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
-	GetAll(ctx context.Context) ([]User, error)
+	GetAllByOrg(ctx context.Context, orgID uuid.UUID) ([]User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	Count(ctx context.Context) (int64, error)
+	CountByOrg(ctx context.Context, orgID uuid.UUID) (int64, error)
 }

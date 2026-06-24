@@ -2,14 +2,18 @@ package handler
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"jewellery-billing/internal/apiresponse"
 	"jewellery-billing/internal/domain"
 	"jewellery-billing/internal/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
-// SettingHandler exposes endpoints for shop configuration.
+// SettingHandler exposes HTTP endpoints for shop settings.
 type SettingHandler struct {
 	settingService *service.SettingService
 }
@@ -18,48 +22,63 @@ func NewSettingHandler(settingService *service.SettingService) *SettingHandler {
 	return &SettingHandler{settingService: settingService}
 }
 
-// Get fetches the current shop settings.
+// Get godoc
 // GET /api/settings
 func (h *SettingHandler) Get(c *fiber.Ctx) error {
-	settings, err := h.settingService.Get(c.Context())
-	if err != nil {
-		return apiresponse.InternalError(c, "Failed to load settings")
-	}
-	return apiresponse.Success(c, fiber.StatusOK, settings)
-}
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
 
-// Update modifies the text-based shop settings.
-// PUT /api/settings
-func (h *SettingHandler) Update(c *fiber.Ctx) error {
-	var req domain.UpdateShopSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
-		fmt.Printf("Setting Update BodyParser Error: %v, Body: %s\n", err, string(c.Body()))
-		return apiresponse.BadRequest(c, "Invalid request body")
-	}
-
-	settings, err := h.settingService.Update(c.Context(), req)
-	if err != nil {
-		return apiresponse.BadRequest(c, err.Error())
-	}
-
-	return apiresponse.Success(c, fiber.StatusOK, settings)
-}
-
-// UploadLogo handles multipart form data to upload a new shop logo.
-// POST /api/settings/logo
-func (h *SettingHandler) UploadLogo(c *fiber.Ctx) error {
-	file, err := c.FormFile("logo")
-	if err != nil {
-		return apiresponse.BadRequest(c, "No logo file provided")
-	}
-
-	path, err := h.settingService.UploadLogo(c.Context(), file)
+	settings, err := h.settingService.Get(c.Context(), orgID)
 	if err != nil {
 		return apiresponse.InternalError(c, err.Error())
 	}
 
+	return apiresponse.Success(c, fiber.StatusOK, settings)
+}
+
+// Update godoc
+// PUT /api/settings
+func (h *SettingHandler) Update(c *fiber.Ctx) error {
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
+
+	var req domain.UpdateShopSettingsRequest
+	if err := c.BodyParser(&req); err != nil {
+		return apiresponse.BadRequest(c, "Invalid request body")
+	}
+
+	result, err := h.settingService.Update(c.Context(), orgID, req)
+	if err != nil {
+		return apiresponse.InternalError(c, err.Error())
+	}
+
+	return apiresponse.Success(c, fiber.StatusOK, result)
+}
+
+// UploadLogo godoc
+// POST /api/settings/logo
+func (h *SettingHandler) UploadLogo(c *fiber.Ctx) error {
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
+
+	file, err := c.FormFile("logo")
+	if err != nil {
+		return apiresponse.BadRequest(c, "Logo file is required")
+	}
+
+	// Save to uploads directory scoped by org
+	uploadDir := filepath.Join("uploads", "logos")
+	os.MkdirAll(uploadDir, 0755)
+	filename := fmt.Sprintf("%s_%s", orgID.String()[:8], file.Filename)
+	savePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveFile(file, savePath); err != nil {
+		return apiresponse.InternalError(c, "Failed to save logo")
+	}
+
+	logoPath := fmt.Sprintf("/uploads/logos/%s", filename)
+	if err := h.settingService.UpdateLogo(c.Context(), orgID, logoPath); err != nil {
+		return apiresponse.InternalError(c, "Failed to update logo path")
+	}
+
 	return apiresponse.Success(c, fiber.StatusOK, fiber.Map{
-		"message":   "Logo uploaded successfully",
-		"logo_path": path,
+		"logo_path": logoPath,
 	})
 }

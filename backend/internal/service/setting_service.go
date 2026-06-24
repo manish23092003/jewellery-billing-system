@@ -3,92 +3,51 @@ package service
 import (
 	"context"
 	"fmt"
-	"io"
-	"mime/multipart"
-	"os"
-	"path/filepath"
-	"time"
+
+	"github.com/google/uuid"
 
 	"jewellery-billing/internal/domain"
 )
 
-// SettingService handles business logic for shop configuration.
+// SettingService handles shop settings CRUD operations.
 type SettingService struct {
-	repo domain.SettingRepository
+	settingRepo domain.SettingRepository
 }
 
-func NewSettingService(repo domain.SettingRepository) *SettingService {
-	return &SettingService{repo: repo}
+func NewSettingService(settingRepo domain.SettingRepository) *SettingService {
+	return &SettingService{settingRepo: settingRepo}
 }
 
-// Get returns the current shop settings.
-func (s *SettingService) Get(ctx context.Context) (*domain.ShopSettings, error) {
-	return s.repo.Get(ctx)
+func (s *SettingService) Get(ctx context.Context, orgID uuid.UUID) (*domain.ShopSettings, error) {
+	return s.settingRepo.Get(ctx, orgID)
 }
 
-// Update overrides the existing settings.
-func (s *SettingService) Update(ctx context.Context, req domain.UpdateShopSettingsRequest) (*domain.ShopSettings, error) {
-	if req.ShopName == "" {
-		return nil, fmt.Errorf("shop name is required")
-	}
-	if req.InvoicePrefix == "" {
-		req.InvoicePrefix = "INV"
-	}
-
+func (s *SettingService) Update(ctx context.Context, orgID uuid.UUID, req domain.UpdateShopSettingsRequest) (*domain.ShopSettings, error) {
 	settings := &domain.ShopSettings{
-		ShopName:      req.ShopName,
-		GSTIN:         req.GSTIN,
-		Phone:         req.Phone,
-		Address:       req.Address,
-		InvoicePrefix: req.InvoicePrefix,
+		OrganizationID: orgID,
+		ShopName:       req.ShopName,
+		GSTIN:          req.GSTIN,
+		Phone:          req.Phone,
+		Address:        req.Address,
+		InvoicePrefix:  req.InvoicePrefix,
 	}
 
-	if err := s.repo.Update(ctx, settings); err != nil {
+	if err := s.settingRepo.Upsert(ctx, settings); err != nil {
 		return nil, fmt.Errorf("failed to update settings: %w", err)
 	}
 
-	return s.repo.Get(ctx)
+	// Re-fetch to get the full record
+	return s.settingRepo.Get(ctx, orgID)
 }
 
-// UploadLogo handles file saving locally and updates the path in the DB.
-func (s *SettingService) UploadLogo(ctx context.Context, fileHeader *multipart.FileHeader) (string, error) {
-	// Validate file type (basic extension check)
-	ext := filepath.Ext(fileHeader.Filename)
-	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
-		return "", fmt.Errorf("only .png, .jpg, and .jpeg files are allowed")
+func (s *SettingService) UpdateLogo(ctx context.Context, orgID uuid.UUID, logoPath string) error {
+	return s.settingRepo.UpdateLogo(ctx, orgID, logoPath)
+}
+
+func (s *SettingService) GetInvoicePrefix(ctx context.Context, orgID uuid.UUID) string {
+	settings, err := s.settingRepo.Get(ctx, orgID)
+	if err != nil || settings.InvoicePrefix == "" {
+		return "INV"
 	}
-
-	file, err := fileHeader.Open()
-	if err != nil {
-		return "", fmt.Errorf("failed to open uploaded file: %w", err)
-	}
-	defer file.Close()
-
-	// Ensure uploads directory exists
-	uploadDir := "./uploads"
-	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-		return "", fmt.Errorf("failed to create upload directory: %w", err)
-	}
-
-	// Generate safe filename
-	filename := fmt.Sprintf("logo_%d%s", time.Now().Unix(), ext)
-	dstPath := filepath.Join(uploadDir, filename)
-
-	dst, err := os.Create(dstPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		return "", fmt.Errorf("failed to write file: %w", err)
-	}
-
-	// Store relative path in DB
-	dbPath := fmt.Sprintf("/uploads/%s", filename)
-	if err := s.repo.UpdateLogo(ctx, dbPath); err != nil {
-		return "", fmt.Errorf("failed to update logo path in database: %w", err)
-	}
-
-	return dbPath, nil
+	return settings.InvoicePrefix
 }

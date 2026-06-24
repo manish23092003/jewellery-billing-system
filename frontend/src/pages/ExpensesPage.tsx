@@ -64,51 +64,51 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Add Expense Form */}
         <div className="lg:col-span-1">
-          <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20 sticky top-6">
+          <Card className="bg-card backdrop-blur-md border-[#c6a962]/20 sticky top-6">
             <CardHeader>
-              <CardTitle className="text-gray-200">Log New Expense</CardTitle>
+              <CardTitle className="text-foreground">Log New Expense</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Category</label>
+                  <label className="text-sm text-muted-foreground">Category</label>
                   <Input 
                     required
                     placeholder="e.g. Salary, Rent" 
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="bg-black/50 border-gray-700 text-gray-200" 
+                    className="bg-muted border-border text-foreground" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Amount (₹)</label>
+                  <label className="text-sm text-muted-foreground">Amount (₹)</label>
                   <Input 
                     required
                     type="number" 
                     placeholder="0.00" 
                     value={formData.amount}
                     onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                    className="bg-black/50 border-gray-700 text-gray-200" 
+                    className="bg-muted border-border text-foreground" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Description</label>
+                  <label className="text-sm text-muted-foreground">Description</label>
                   <Input 
                     required
                     placeholder="Brief details" 
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="bg-black/50 border-gray-700 text-gray-200" 
+                    className="bg-muted border-border text-foreground" 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Date</label>
+                  <label className="text-sm text-muted-foreground">Date</label>
                   <Input 
                     required
                     type="date" 
                     value={formData.expense_date}
                     onChange={(e) => setFormData({...formData, expense_date: e.target.value})}
-                    className="bg-black/50 border-gray-700 text-gray-200" 
+                    className="bg-muted border-border text-foreground" 
                   />
                 </div>
                 <Button type="submit" disabled={createMutation.isPending} className="w-full mt-4">
@@ -121,14 +121,14 @@ export default function ExpensesPage() {
 
         {/* Expense History Table */}
         <div className="lg:col-span-2">
-          <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20">
+          <Card className="bg-card backdrop-blur-md border-[#c6a962]/20">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-gray-200">Recent Expenses</CardTitle>
+              <CardTitle className="text-foreground">Recent Expenses</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-gray-400 uppercase bg-black/50 border-b border-[#c6a962]/20">
+                  <thead className="text-xs text-muted-foreground uppercase bg-muted border-b border-[#c6a962]/20">
                     <tr>
                       <th className="px-4 py-3 font-medium">Date</th>
                       <th className="px-4 py-3 font-medium">Category</th>
@@ -140,21 +140,21 @@ export default function ExpensesPage() {
                   <tbody>
                     {expenses?.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="text-center py-8 text-gray-500">No expenses found</td>
+                        <td colSpan={5} className="text-center py-8 text-muted-foreground">No expenses found</td>
                       </tr>
                     )}
                     {expenses?.map((exp: any) => (
-                      <tr key={exp.id} className="border-b border-gray-800 hover:bg-red-500/5 transition-colors">
-                        <td className="px-4 py-3 text-gray-300">{exp.expense_date.split('T')[0]}</td>
+                      <tr key={exp.id} className="border-b border-border hover:bg-red-500/5 transition-colors">
+                        <td className="px-4 py-3 text-foreground/90">{exp.expense_date.split('T')[0]}</td>
                         <td className="px-4 py-3 text-[#c6a962] font-medium">{exp.category}</td>
-                        <td className="px-4 py-3 text-gray-300">{exp.description}</td>
+                        <td className="px-4 py-3 text-foreground/90">{exp.description}</td>
                         <td className="px-4 py-3 text-right font-bold text-red-400">-₹{exp.amount.toLocaleString()}</td>
                         <td className="px-4 py-3 text-center">
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => deleteMutation.mutate(exp.id)}
-                            className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-500/10"
+                            className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

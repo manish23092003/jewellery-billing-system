@@ -19,6 +19,7 @@ export const createMetalRate = async (payload: {
   metal_type: string;
   purity: string;
   rate_per_gram: number;
+  effective_date: string;
 }): Promise<MetalRate> => {
   const { data } = await api.post<APIResponse<MetalRate>>("/metal-rates", payload);
   if (!data.success) throw new Error(data.error);

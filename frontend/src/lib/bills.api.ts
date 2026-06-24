@@ -34,6 +34,7 @@ export interface CreateBillRequest {
   payment_method: string;
   notes: string;
   items: BillItem[];
+  convert_from_id?: string;
 }
 
 export const getBills = async (): Promise<Bill[]> => {
@@ -42,8 +43,34 @@ export const getBills = async (): Promise<Bill[]> => {
   return data.data || [];
 };
 
+export const getBillById = async (id: string): Promise<any> => {
+  const { data } = await api.get<APIResponse<any>>(`/bills/${id}`);
+  if (!data.success) throw new Error(data.error);
+  return data.data;
+};
+
 export const createBill = async (payload: CreateBillRequest): Promise<Bill> => {
   const { data } = await api.post<APIResponse<Bill>>("/bills", payload);
+  if (!data.success) throw new Error(data.error);
+  return data.data!;
+};
+
+export const addPayment = async ({ id, amount }: { id: string; amount: number }): Promise<void> => {
+  const { data } = await api.post<APIResponse<void>>(`/bills/${id}/payment`, { amount });
+  if (!data.success) throw new Error(data.error);
+};
+
+export interface PublicVerificationResponse {
+  shop_name: string;
+  invoice_number: string;
+  invoice_date: string;
+  grand_total: number;
+  balance_due: number;
+  verification_status: "VERIFIED" | "TAMPERED" | "VOID" | "CANCELLED" | "ACTIVE";
+}
+
+export const verifyInvoice = async (token: string): Promise<PublicVerificationResponse> => {
+  const { data } = await api.get<APIResponse<PublicVerificationResponse>>(`/public/verify/${token}`);
   if (!data.success) throw new Error(data.error);
   return data.data!;
 };

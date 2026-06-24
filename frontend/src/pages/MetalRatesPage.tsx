@@ -31,10 +31,14 @@ export default function MetalRatesPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.metal_type || !formData.purity || !formData.rate_per_gram) return;
+    
+    const today = new Date().toISOString().split("T")[0];
+    
     mutation.mutate({
       metal_type: formData.metal_type,
       purity: formData.purity,
-      rate_per_gram: parseFloat(formData.rate_per_gram)
+      rate_per_gram: parseFloat(formData.rate_per_gram),
+      effective_date: today,
     });
   };
 
@@ -52,18 +56,18 @@ export default function MetalRatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {rates?.map((rate: any, i: number) => (
-          <Card key={i} className="hover:shadow-lg transition-all border-[#c6a962]/20 bg-black/40 backdrop-blur-md">
+          <Card key={i} className="hover:shadow-lg transition-all border-[#c6a962]/20 bg-card backdrop-blur-md">
             <CardHeader className="pb-2">
-              <CardTitle className="capitalize text-lg text-gray-200">
+              <CardTitle className="capitalize text-lg text-foreground">
                 {rate.metal_type} - {rate.purity}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold text-[#c6a962]">
                 ₹{rate.rate_per_gram}
-                <span className="text-sm font-normal text-gray-400 ml-1">/ g</span>
+                <span className="text-sm font-normal text-muted-foreground ml-1">/ g</span>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 Effective: {rate.effective_date}
               </p>
             </CardContent>
@@ -71,41 +75,41 @@ export default function MetalRatesPage() {
         ))}
       </div>
 
-      <Card className="mt-8 bg-black/40 backdrop-blur-md border-[#c6a962]/20">
+      <Card className="mt-8 bg-card backdrop-blur-md border-[#c6a962]/20">
         <CardHeader>
-          <CardTitle className="text-gray-200">Add / Update Rate</CardTitle>
+          <CardTitle className="text-foreground">Add / Update Rate</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Metal Type</label>
+              <label className="text-sm font-medium text-foreground/90">Metal Type</label>
               <Input 
                 required
                 placeholder="e.g. gold" 
                 value={formData.metal_type} 
                 onChange={(e) => setFormData({...formData, metal_type: e.target.value})} 
-                className="text-gray-200 border-gray-700 bg-black/50" 
+                className="text-foreground border-border bg-muted" 
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Purity</label>
+              <label className="text-sm font-medium text-foreground/90">Purity</label>
               <Input 
                 required
                 placeholder="e.g. 22K" 
                 value={formData.purity} 
                 onChange={(e) => setFormData({...formData, purity: e.target.value})} 
-                className="text-gray-200 border-gray-700 bg-black/50" 
+                className="text-foreground border-border bg-muted" 
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Rate / Gram (₹)</label>
+              <label className="text-sm font-medium text-foreground/90">Rate / Gram (₹)</label>
               <Input 
                 required
                 type="number" 
                 placeholder="0.00" 
                 value={formData.rate_per_gram} 
                 onChange={(e) => setFormData({...formData, rate_per_gram: e.target.value})} 
-                className="text-gray-200 border-gray-700 bg-black/50" 
+                className="text-foreground border-border bg-muted" 
               />
             </div>
             <Button type="submit" disabled={mutation.isPending} className="w-full h-9">

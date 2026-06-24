@@ -5,9 +5,10 @@ import (
 	"jewellery-billing/internal/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
-// AnalyticsHandler exposes HTTP endpoints for the dashboard.
+// AnalyticsHandler exposes HTTP endpoints for dashboard analytics.
 type AnalyticsHandler struct {
 	analyticsService *service.AnalyticsService
 }
@@ -16,12 +17,14 @@ func NewAnalyticsHandler(analyticsService *service.AnalyticsService) *AnalyticsH
 	return &AnalyticsHandler{analyticsService: analyticsService}
 }
 
-// GetDashboard returns the aggregated dashboard metrics and trends.
+// GetDashboard godoc
 // GET /api/analytics/dashboard
 func (h *AnalyticsHandler) GetDashboard(c *fiber.Ctx) error {
-	data, err := h.analyticsService.GetDashboard(c.Context())
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
+
+	data, err := h.analyticsService.GetDashboard(c.Context(), orgID)
 	if err != nil {
-		return apiresponse.InternalError(c, "Failed to load dashboard analytics")
+		return apiresponse.InternalError(c, err.Error())
 	}
 
 	return apiresponse.Success(c, fiber.StatusOK, data)

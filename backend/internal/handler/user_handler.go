@@ -1,15 +1,15 @@
 package handler
 
 import (
+	"jewellery-billing/internal/apiresponse"
 	"jewellery-billing/internal/domain"
 	"jewellery-billing/internal/service"
-	"jewellery-billing/internal/apiresponse"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-// UserHandler exposes HTTP endpoints for user management (admin-only).
+// UserHandler exposes HTTP endpoints for user management (admin only).
 type UserHandler struct {
 	userService *service.UserService
 }
@@ -19,9 +19,10 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 }
 
 // Create godoc
-// POST /api/users (admin)
-// Creates a new user account with the given name, email, password, and role.
+// POST /api/users
 func (h *UserHandler) Create(c *fiber.Ctx) error {
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
+
 	var req domain.CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
 		return apiresponse.BadRequest(c, "Invalid request body")
@@ -30,55 +31,53 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	if req.Name == "" || req.Email == "" || req.Password == "" {
 		return apiresponse.BadRequest(c, "Name, email, and password are required")
 	}
-
 	if !req.Role.IsValid() {
-		return apiresponse.BadRequest(c, "Invalid role — must be 'admin' or 'staff'")
+		req.Role = domain.RoleStaff
 	}
 
-	result, err := h.userService.Create(c.Context(), req)
+	result, err := h.userService.Create(c.Context(), orgID, req)
 	if err != nil {
-		return apiresponse.Error(c, fiber.StatusConflict, err.Error())
+		return apiresponse.BadRequest(c, err.Error())
 	}
 
 	return apiresponse.Success(c, fiber.StatusCreated, result)
 }
 
 // GetAll godoc
-// GET /api/users (admin)
-// Returns all users in the system.
+// GET /api/users
 func (h *UserHandler) GetAll(c *fiber.Ctx) error {
-	users, err := h.userService.GetAll(c.Context())
+	orgID, _ := c.Locals("organizationID").(uuid.UUID)
+
+	users, err := h.userService.GetAll(c.Context(), orgID)
 	if err != nil {
-		return apiresponse.InternalError(c, "Failed to fetch users")
+		return apiresponse.InternalError(c, err.Error())
 	}
 
 	return apiresponse.Success(c, fiber.StatusOK, users)
 }
 
 // GetByID godoc
-// GET /api/users/:id (admin)
-// Returns a single user by UUID.
+// GET /api/users/:id
 func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return apiresponse.BadRequest(c, "Invalid user ID format")
+		return apiresponse.BadRequest(c, "Invalid user ID")
 	}
 
 	user, err := h.userService.GetByID(c.Context(), id)
 	if err != nil {
-		return apiresponse.NotFound(c, "User not found")
+		return apiresponse.NotFound(c, err.Error())
 	}
 
 	return apiresponse.Success(c, fiber.StatusOK, user)
 }
 
 // Update godoc
-// PUT /api/users/:id (admin)
-// Partially updates a user — only non-empty fields are applied.
+// PUT /api/users/:id
 func (h *UserHandler) Update(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return apiresponse.BadRequest(c, "Invalid user ID format")
+		return apiresponse.BadRequest(c, "Invalid user ID")
 	}
 
 	var req domain.UpdateUserRequest
@@ -88,27 +87,23 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 
 	result, err := h.userService.Update(c.Context(), id, req)
 	if err != nil {
-		return apiresponse.Error(c, fiber.StatusConflict, err.Error())
+		return apiresponse.BadRequest(c, err.Error())
 	}
 
 	return apiresponse.Success(c, fiber.StatusOK, result)
 }
 
 // Delete godoc
-// DELETE /api/users/:id (admin)
-// Permanently removes a user account.
+// DELETE /api/users/:id
 func (h *UserHandler) Delete(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return apiresponse.BadRequest(c, "Invalid user ID format")
+		return apiresponse.BadRequest(c, "Invalid user ID")
 	}
 
 	if err := h.userService.Delete(c.Context(), id); err != nil {
-		return apiresponse.NotFound(c, "User not found")
+		return apiresponse.NotFound(c, err.Error())
 	}
 
-	return apiresponse.Success(c, fiber.StatusOK, fiber.Map{
-		"message": "User deleted successfully",
-	})
+	return apiresponse.Success(c, fiber.StatusOK, fiber.Map{"message": "User deleted"})
 }
-

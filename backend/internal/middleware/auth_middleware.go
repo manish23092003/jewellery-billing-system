@@ -3,8 +3,8 @@ package middleware
 import (
 	"strings"
 
-	"jewellery-billing/internal/service"
 	"jewellery-billing/internal/apiresponse"
+	"jewellery-billing/internal/service"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,9 +14,10 @@ import (
 //
 // Downstream handlers can access:
 //
-//	c.Locals("userID")  → uuid.UUID
-//	c.Locals("email")   → string
-//	c.Locals("role")    → domain.UserRole
+//	c.Locals("userID")          → uuid.UUID
+//	c.Locals("organizationID") → uuid.UUID
+//	c.Locals("email")          → string
+//	c.Locals("role")           → domain.UserRole
 func AuthRequired(authService *service.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -37,10 +38,10 @@ func AuthRequired(authService *service.AuthService) fiber.Handler {
 
 		// Store claims in context for downstream use.
 		c.Locals("userID", claims.UserID)
+		c.Locals("organizationID", claims.OrganizationID)
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
 
 		return c.Next()
 	}
 }
-

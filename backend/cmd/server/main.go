@@ -5,15 +5,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog/log"
 
 	"jewellery-billing/database"
-	"jewellery-billing/database/seed"
 	"jewellery-billing/internal/config"
 	"jewellery-billing/internal/handler"
 	"jewellery-billing/internal/middleware"
@@ -45,45 +46,59 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to run database migrations")
 	}
 
-	// ── 5. Seed Data ───────────────────────────────────────────────────
-	if err := seed.SeedAdminUser(pool); err != nil {
-		log.Warn().Err(err).Msg("Failed to seed admin user")
-	}
-
-	// ── 6. Dependency Injection ────────────────────────────────────────
+	// ── 5. Dependency Injection ────────────────────────────────────────
 	// Repositories
+	orgRepo := repository.NewOrganizationRepository(pool)
 	userRepo := repository.NewUserRepository(pool)
+	tokenRepo := repository.NewTokenRepository(pool)
 	metalRateRepo := repository.NewMetalRateRepository(pool)
 	billRepo := repository.NewBillRepository(pool)
 	settingRepo := repository.NewSettingRepository(pool)
 	expenseRepo := repository.NewExpenseRepository(pool)
 	analyticsRepo := repository.NewAnalyticsRepository(pool)
+	customerRepo := repository.NewPostgresCustomerRepository(pool)
+	verificationLogRepo := repository.NewVerificationLogRepository(pool)
+	_ = repository.NewAuditRepository(pool) // Available for future use
+
+	// Email Sender — use SMTP if configured, otherwise console logger
+	var emailSender service.EmailSender
+	if cfg.IsSMTPConfigured() {
+		emailSender = service.NewSMTPEmailSender(cfg)
+		log.Info().Msg("✓ Using SMTP email sender")
+	} else {
+		emailSender = service.NewConsoleEmailSender(cfg.AppURL)
+		log.Info().Msg("✓ Using console email sender (development mode)")
+	}
 
 	// Services
-	authService := service.NewAuthService(userRepo, cfg)
+	authService := service.NewAuthService(userRepo, orgRepo, cfg)
+	registrationService := service.NewRegistrationService(orgRepo, userRepo, tokenRepo, settingRepo, authService, emailSender)
+	passwordResetService := service.NewPasswordResetService(userRepo, tokenRepo, emailSender)
 	userService := service.NewUserService(userRepo)
 	metalRateService := service.NewMetalRateService(metalRateRepo)
-	billService := service.NewBillService(billRepo)
+	billService := service.NewBillService(billRepo, customerRepo)
 	settingService := service.NewSettingService(settingRepo)
 	expenseService := service.NewExpenseService(expenseRepo)
 	analyticsService := service.NewAnalyticsService(analyticsRepo)
+	customerService := service.NewCustomerService(customerRepo)
 	pdfService := service.NewPDFService()
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, orgRepo)
+	registrationHandler := handler.NewRegistrationHandler(registrationService)
+	passwordResetHandler := handler.NewPasswordResetHandler(passwordResetService)
+	emailVerificationHandler := handler.NewEmailVerificationHandler(authService, tokenRepo, emailSender, userRepo)
 	userHandler := handler.NewUserHandler(userService)
 	metalRateHandler := handler.NewMetalRateHandler(metalRateService)
-	billHandler := handler.NewBillHandler(billService, settingService, pdfService)
+	billHandler := handler.NewBillHandler(billService, settingService, pdfService, verificationLogRepo)
 	settingHandler := handler.NewSettingHandler(settingService)
 	expenseHandler := handler.NewExpenseHandler(expenseService)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsService)
+	customerHandler := handler.NewCustomerHandler(customerService)
 
-	// Middlewares
-	adminMid := middleware.AdminOnly()
-
-	// ── 7. Fiber App ───────────────────────────────────────────────────
+	// ── 6. Fiber App ───────────────────────────────────────────────────
 	app := fiber.New(fiber.Config{
-		AppName:      "Jewellery Billing API v1.0",
+		AppName:      "Jewellery Billing API v2.0",
 		ErrorHandler: globalErrorHandler,
 	})
 
@@ -99,8 +114,8 @@ func main() {
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
-	// ── 8. Routes ──────────────────────────────────────────────────────
-	
+	// ── 7. Routes ──────────────────────────────────────────────────────
+
 	// Serve uploaded files
 	app.Static("/uploads", "./uploads")
 
@@ -112,59 +127,78 @@ func main() {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
 			"service": "jewellery-billing-api",
+			"version": "2.0.0",
 		})
 	})
 
-	// Auth routes (public)
-	auth := app.Group("/api/auth")
-	auth.Post("/login", authHandler.Login)
+	// Public routes (rate-limited)
+	public := api.Group("/public")
+	public.Use(limiter.New(limiter.Config{
+		Max:        20,
+		Expiration: 1 * time.Minute,
+	}))
+	public.Get("/verify/:token", billHandler.VerifyInvoice)
+
+	// Auth routes (public, rate-limited)
+	auth := api.Group("/auth")
+	auth.Post("/login", middleware.LoginRateLimiter(), authHandler.Login)
 	auth.Post("/refresh", authHandler.RefreshToken)
+	auth.Post("/register", middleware.RegistrationRateLimiter(), registrationHandler.Register)
+	auth.Post("/forgot-password", middleware.PasswordResetRateLimiter(), passwordResetHandler.ForgotPassword)
+	auth.Post("/reset-password", middleware.PasswordResetRateLimiter(), passwordResetHandler.ResetPassword)
+	auth.Post("/verify-email", emailVerificationHandler.VerifyEmail)
 
 	// Protected routes — require valid JWT
-	protected := app.Group("/api", middleware.AuthRequired(authService))
+	protected := api.Group("/", middleware.AuthRequired(authService))
 
 	// Auth (protected)
-	protected.Post("/auth/logout", authHandler.Logout)
-	protected.Get("/auth/me", authHandler.Me)
+	protected.Post("auth/logout", authHandler.Logout)
+	protected.Get("auth/me", authHandler.Me)
+	protected.Post("auth/resend-verification", emailVerificationHandler.ResendVerification)
 
 	// User management (admin only)
-	users := protected.Group("/users", middleware.AdminOnly())
-	users.Get("/", userHandler.GetAll)
-
-
-	protected.Get("/users", adminMid, userHandler.GetAll)
-	protected.Post("/users", adminMid, userHandler.Create)
-	protected.Get("/users/:id", adminMid, userHandler.GetByID)
-	protected.Put("/users/:id", adminMid, userHandler.Update)
-	protected.Delete("/users/:id", adminMid, userHandler.Delete)
+	adminMid := middleware.AdminOnly()
+	protected.Get("users", adminMid, userHandler.GetAll)
+	protected.Post("users", adminMid, userHandler.Create)
+	protected.Get("users/:id", adminMid, userHandler.GetByID)
+	protected.Put("users/:id", adminMid, userHandler.Update)
+	protected.Delete("users/:id", adminMid, userHandler.Delete)
 
 	// Metal Rates
-	protected.Get("/metal-rates/latest", metalRateHandler.GetCurrentRates)
-	protected.Post("/metal-rates", adminMid, metalRateHandler.Create)
-	protected.Get("/metal-rates", metalRateHandler.GetHistory)
-	protected.Delete("/metal-rates/:id", adminMid, metalRateHandler.Delete)
+	protected.Get("metal-rates/latest", metalRateHandler.GetCurrentRates)
+	protected.Post("metal-rates", adminMid, metalRateHandler.Create)
+	protected.Get("metal-rates", metalRateHandler.GetHistory)
+	protected.Delete("metal-rates/:id", adminMid, metalRateHandler.Delete)
 
 	// Bills
-	protected.Post("/bills", billHandler.Create)
-	protected.Get("/bills", billHandler.GetAll)
-	protected.Get("/bills/:id", billHandler.GetByID)
-	protected.Get("/bills/:id/pdf", billHandler.DownloadPDF)
-	protected.Delete("/bills/:id", adminMid, billHandler.Delete)
+	protected.Post("bills", billHandler.Create)
+	protected.Get("bills", billHandler.GetAll)
+	protected.Get("bills/:id", billHandler.GetByID)
+	protected.Get("bills/:id/pdf", billHandler.DownloadPDF)
+	protected.Post("bills/:id/payment", billHandler.AddPayment)
+	protected.Delete("bills/:id", adminMid, billHandler.Delete)
 
-	// Settings
-	protected.Get("/settings", settingHandler.Get)
-	protected.Put("/settings", adminMid, settingHandler.Update)
-	protected.Post("/settings/logo", adminMid, settingHandler.UploadLogo)
+	// Settings (admin only for mutations)
+	protected.Get("settings", settingHandler.Get)
+	protected.Put("settings", adminMid, settingHandler.Update)
+	protected.Post("settings/logo", adminMid, settingHandler.UploadLogo)
 
 	// Expenses
-	protected.Post("/expenses", expenseHandler.Create)
-	protected.Get("/expenses", expenseHandler.GetAll)
-	protected.Delete("/expenses/:id", adminMid, expenseHandler.Delete)
+	protected.Post("expenses", expenseHandler.Create)
+	protected.Get("expenses", expenseHandler.GetAll)
+	protected.Delete("expenses/:id", adminMid, expenseHandler.Delete)
 
 	// Analytics
-	protected.Get("/analytics/dashboard", analyticsHandler.GetDashboard)
+	protected.Get("analytics/dashboard", analyticsHandler.GetDashboard)
 
-	// ── 9. Graceful Shutdown ───────────────────────────────────────────
+	// Customers
+	protected.Post("customers", customerHandler.Create)
+	protected.Get("customers", customerHandler.GetAll)
+	protected.Get("customers/:id", customerHandler.GetByID)
+	protected.Put("customers/:id", customerHandler.Update)
+	protected.Delete("customers/:id", adminMid, customerHandler.Delete)
+
+	// ── 8. Graceful Shutdown ───────────────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -176,7 +210,7 @@ func main() {
 		}
 	}()
 
-	// ── 10. Start Server ───────────────────────────────────────────────
+	// ── 9. Start Server ────────────────────────────────────────────────
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	log.Info().Str("address", addr).Msg("🚀 Jewellery Billing API is live")
 	if err := app.Listen(addr); err != nil {

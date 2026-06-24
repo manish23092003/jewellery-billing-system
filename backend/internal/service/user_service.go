@@ -20,8 +20,8 @@ func NewUserService(userRepo domain.UserRepository) *UserService {
 	return &UserService{userRepo: userRepo}
 }
 
-// Create registers a new user after validating uniqueness and hashing the password.
-func (s *UserService) Create(ctx context.Context, req domain.CreateUserRequest) (*domain.UserResponse, error) {
+// Create registers a new user within an organization after validating uniqueness and hashing the password.
+func (s *UserService) Create(ctx context.Context, orgID uuid.UUID, req domain.CreateUserRequest) (*domain.UserResponse, error) {
 	// Guard against duplicate emails.
 	existing, _ := s.userRepo.GetByEmail(ctx, req.Email)
 	if existing != nil {
@@ -34,10 +34,13 @@ func (s *UserService) Create(ctx context.Context, req domain.CreateUserRequest) 
 	}
 
 	user := &domain.User{
-		Name:         req.Name,
-		Email:        req.Email,
-		PasswordHash: string(hash),
-		Role:         req.Role,
+		OrganizationID: orgID,
+		Name:           req.Name,
+		Email:          req.Email,
+		PasswordHash:   string(hash),
+		Role:           req.Role,
+		IsActive:       true,
+		EmailVerified:  false,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -58,9 +61,9 @@ func (s *UserService) GetByID(ctx context.Context, id uuid.UUID) (*domain.UserRe
 	return &resp, nil
 }
 
-// GetAll returns every user in the system (admin-only endpoint).
-func (s *UserService) GetAll(ctx context.Context) ([]domain.UserResponse, error) {
-	users, err := s.userRepo.GetAll(ctx)
+// GetAll returns every user in the organization (admin-only endpoint).
+func (s *UserService) GetAll(ctx context.Context, orgID uuid.UUID) ([]domain.UserResponse, error) {
+	users, err := s.userRepo.GetAllByOrg(ctx, orgID)
 	if err != nil {
 		return nil, err
 	}

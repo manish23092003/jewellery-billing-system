@@ -32,25 +32,25 @@ export default function DashboardPage() {
 
       {/* Metrics Row 1 - Today */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20 shadow-[0_0_15px_rgba(198,169,98,0.05)]">
+        <Card className="bg-card backdrop-blur-md border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Today's Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-200">₹{metrics.today_sales.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-foreground">₹{metrics.today_sales.toLocaleString()}</div>
           </CardContent>
         </Card>
         
-        <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20 shadow-[0_0_15px_rgba(198,169,98,0.05)]">
+        <Card className="bg-card backdrop-blur-md border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Today's Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today's Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-400">₹{metrics.today_expenses.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-destructive">₹{metrics.today_expenses.toLocaleString()}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-[#c6a962]/10 to-transparent backdrop-blur-md border-[#c6a962]/40 shadow-[0_0_15px_rgba(198,169,98,0.1)]">
+        <Card className="bg-gradient-to-br from-[#c6a962]/10 to-transparent backdrop-blur-md border-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-[#c6a962]">Today's Profit</CardTitle>
           </CardHeader>
@@ -62,27 +62,27 @@ export default function DashboardPage() {
 
       {/* Metrics Row 2 - Monthly */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-black/40 backdrop-blur-md border-gray-800">
+        <Card className="bg-card backdrop-blur-md border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-300">₹{metrics.monthly_sales.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-foreground/90">₹{metrics.monthly_sales.toLocaleString()}</div>
           </CardContent>
         </Card>
         
-        <Card className="bg-black/40 backdrop-blur-md border-gray-800">
+        <Card className="bg-card backdrop-blur-md border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Monthly Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-400/80">₹{metrics.monthly_expenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-destructive/90">₹{metrics.monthly_expenses.toLocaleString()}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-black/40 backdrop-blur-md border-gray-800">
+        <Card className="bg-card backdrop-blur-md border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Monthly Profit</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Profit</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500/80">₹{metrics.monthly_profit.toLocaleString()}</div>
@@ -91,9 +91,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts */}
-      <Card className="bg-black/40 backdrop-blur-md border-[#c6a962]/20 p-2">
+      <Card className="bg-card backdrop-blur-md border-border p-2">
         <CardHeader>
-          <CardTitle className="text-gray-200">Revenue vs Expense Trend</CardTitle>
+          <CardTitle className="text-foreground">Revenue vs Expense Trend</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px] w-full mt-4">
@@ -109,12 +109,12 @@ export default function DashboardPage() {
                     <stop offset="95%" stopColor="#f87171" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="date" stroke="#666" tick={{fill: '#888', fontSize: 12}} />
-                <YAxis stroke="#666" tick={{fill: '#888', fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="date" stroke="currentColor" tick={{fontSize: 12}} />
+                <YAxis stroke="currentColor" tick={{fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#111', borderColor: '#333', color: '#fff', borderRadius: '8px' }}
-                  itemStyle={{ color: '#ccc' }}
+                  contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)', color: 'var(--color-foreground)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--color-foreground)' }}
                 />
                 <Area type="monotone" dataKey="sales" stroke="#c6a962" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" name="Revenue" />
                 <Area type="monotone" dataKey="expenses" stroke="#f87171" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Expenses" />

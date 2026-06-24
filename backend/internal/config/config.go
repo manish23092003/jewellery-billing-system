@@ -25,6 +25,19 @@ type Config struct {
 	JWTSecret           string
 	JWTAccessExpiryMin  int
 	JWTRefreshExpiryDay int
+
+	// Security
+	VerificationSecret string
+
+	// SMTP (Email)
+	SMTPHost     string
+	SMTPPort     string
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
+
+	// Application
+	AppURL string
 }
 
 // Load reads the .env file (if present) and populates a Config struct.
@@ -43,6 +56,11 @@ func Load() (*Config, error) {
 		refreshExpiry = 7
 	}
 
+	verificationSecret := os.Getenv("VERIFICATION_SECRET")
+	if verificationSecret == "" {
+		return nil, fmt.Errorf("VERIFICATION_SECRET environment variable is strictly required")
+	}
+
 	return &Config{
 		DBHost:              getEnv("DB_HOST", "localhost"),
 		DBPort:              getEnv("DB_PORT", "5432"),
@@ -54,6 +72,13 @@ func Load() (*Config, error) {
 		JWTSecret:           getEnv("JWT_SECRET", "change-me-in-production"),
 		JWTAccessExpiryMin:  accessExpiry,
 		JWTRefreshExpiryDay: refreshExpiry,
+		VerificationSecret:  verificationSecret,
+		SMTPHost:            getEnv("SMTP_HOST", ""),
+		SMTPPort:            getEnv("SMTP_PORT", "587"),
+		SMTPUser:            getEnv("SMTP_USER", ""),
+		SMTPPassword:        getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:            getEnv("SMTP_FROM", "noreply@jewellery-billing.com"),
+		AppURL:              getEnv("APP_URL", "http://localhost:5173"),
 	}, nil
 }
 
@@ -62,6 +87,11 @@ func (c *Config) DatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode,
 	)
+}
+
+// IsSMTPConfigured returns true if SMTP settings are provided.
+func (c *Config) IsSMTPConfigured() bool {
+	return c.SMTPHost != "" && c.SMTPUser != ""
 }
 
 // getEnv reads an environment variable or returns a fallback default.

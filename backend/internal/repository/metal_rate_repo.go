@@ -22,48 +22,47 @@ func NewMetalRateRepository(db *pgxpool.Pool) domain.MetalRateRepository {
 // ── Queries ────────────────────────────────────────────────────────────
 
 const (
-	queryInsertRate = `
-		INSERT INTO metal_rates (metal_type, purity, rate_per_gram, effective_date)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (metal_type, purity, effective_date) 
+	queryInsertRateMultiTenant = `
+		INSERT INTO metal_rates (organization_id, metal_type, purity, rate_per_gram, effective_date)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (organization_id, metal_type, purity, effective_date)
 		DO UPDATE SET rate_per_gram = EXCLUDED.rate_per_gram
 		RETURNING id, created_at`
 
-	queryGetRateByID = `
-		SELECT id, metal_type, purity, rate_per_gram,
+	queryGetRateByIDMultiTenant = `
+		SELECT id, organization_id, metal_type, purity, rate_per_gram,
 		       TO_CHAR(effective_date, 'YYYY-MM-DD') AS effective_date, created_at
-		FROM metal_rates WHERE id = $1`
+		FROM metal_rates WHERE id = $1 AND organization_id = $2`
 
-	// DISTINCT ON gives us the latest rate for each metal_type + purity pair
-	queryCurrentRates = `
+	queryCurrentRatesMultiTenant = `
 		SELECT DISTINCT ON (metal_type, purity)
-		       id, metal_type, purity, rate_per_gram,
+		       id, organization_id, metal_type, purity, rate_per_gram,
 		       TO_CHAR(effective_date, 'YYYY-MM-DD') AS effective_date, created_at
 		FROM metal_rates
-		WHERE effective_date <= CURRENT_DATE
+		WHERE organization_id = $1 AND effective_date <= CURRENT_DATE
 		ORDER BY metal_type, purity, effective_date DESC`
 
-	queryUpdateRate = `
+	queryUpdateRateMultiTenant = `
 		UPDATE metal_rates
-		SET rate_per_gram = $2, effective_date = $3
-		WHERE id = $1
+		SET rate_per_gram = $3, effective_date = $4
+		WHERE id = $1 AND organization_id = $2
 		RETURNING created_at`
 
-	queryDeleteRate = `DELETE FROM metal_rates WHERE id = $1`
+	queryDeleteRateMultiTenant = `DELETE FROM metal_rates WHERE id = $1 AND organization_id = $2`
 )
 
 // ── Implementation ─────────────────────────────────────────────────────
 
 func (r *metalRateRepository) Create(ctx context.Context, rate *domain.MetalRate) error {
-	return r.db.QueryRow(ctx, queryInsertRate,
-		rate.MetalType, rate.Purity, rate.RatePerGram, rate.EffectiveDate,
+	return r.db.QueryRow(ctx, queryInsertRateMultiTenant,
+		rate.OrganizationID, rate.MetalType, rate.Purity, rate.RatePerGram, rate.EffectiveDate,
 	).Scan(&rate.ID, &rate.CreatedAt)
 }
 
-func (r *metalRateRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.MetalRate, error) {
+func (r *metalRateRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*domain.MetalRate, error) {
 	rate := &domain.MetalRate{}
-	err := r.db.QueryRow(ctx, queryGetRateByID, id).Scan(
-		&rate.ID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
+	err := r.db.QueryRow(ctx, queryGetRateByIDMultiTenant, id, orgID).Scan(
+		&rate.ID, &rate.OrganizationID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
 		&rate.EffectiveDate, &rate.CreatedAt,
 	)
 	if err != nil {
@@ -75,8 +74,8 @@ func (r *metalRateRepository) GetByID(ctx context.Context, id uuid.UUID) (*domai
 	return rate, nil
 }
 
-func (r *metalRateRepository) GetCurrentRates(ctx context.Context) ([]domain.MetalRate, error) {
-	rows, err := r.db.Query(ctx, queryCurrentRates)
+func (r *metalRateRepository) GetCurrentRates(ctx context.Context, orgID uuid.UUID) ([]domain.MetalRate, error) {
+	rows, err := r.db.Query(ctx, queryCurrentRatesMultiTenant, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query current rates: %w", err)
 	}
@@ -86,7 +85,7 @@ func (r *metalRateRepository) GetCurrentRates(ctx context.Context) ([]domain.Met
 	for rows.Next() {
 		var rate domain.MetalRate
 		if err := rows.Scan(
-			&rate.ID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
+			&rate.ID, &rate.OrganizationID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
 			&rate.EffectiveDate, &rate.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan rate: %w", err)
@@ -96,19 +95,18 @@ func (r *metalRateRepository) GetCurrentRates(ctx context.Context) ([]domain.Met
 	return rates, rows.Err()
 }
 
-func (r *metalRateRepository) GetHistory(ctx context.Context, metalType string, limit, offset int) ([]domain.MetalRate, int64, error) {
-	// Build query dynamically based on filter
-	baseQuery := `SELECT id, metal_type, purity, rate_per_gram,
+func (r *metalRateRepository) GetHistory(ctx context.Context, orgID uuid.UUID, metalType string, limit, offset int) ([]domain.MetalRate, int64, error) {
+	baseQuery := `SELECT id, organization_id, metal_type, purity, rate_per_gram,
 	                     TO_CHAR(effective_date, 'YYYY-MM-DD') AS effective_date, created_at
 	              FROM metal_rates`
 	countQuery := `SELECT COUNT(*) FROM metal_rates`
 
-	var args []interface{}
-	where := ""
-	argIdx := 1
+	args := []interface{}{orgID}
+	where := " WHERE organization_id = $1"
+	argIdx := 2
 
 	if metalType != "" {
-		where = fmt.Sprintf(" WHERE metal_type = $%d", argIdx)
+		where += fmt.Sprintf(" AND metal_type = $%d", argIdx)
 		args = append(args, metalType)
 		argIdx++
 	}
@@ -136,7 +134,7 @@ func (r *metalRateRepository) GetHistory(ctx context.Context, metalType string, 
 	for rows.Next() {
 		var rate domain.MetalRate
 		if err := rows.Scan(
-			&rate.ID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
+			&rate.ID, &rate.OrganizationID, &rate.MetalType, &rate.Purity, &rate.RatePerGram,
 			&rate.EffectiveDate, &rate.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan rate: %w", err)
@@ -147,8 +145,8 @@ func (r *metalRateRepository) GetHistory(ctx context.Context, metalType string, 
 }
 
 func (r *metalRateRepository) Update(ctx context.Context, rate *domain.MetalRate) error {
-	result, err := r.db.Exec(ctx, queryUpdateRate,
-		rate.ID, rate.RatePerGram, rate.EffectiveDate,
+	result, err := r.db.Exec(ctx, queryUpdateRateMultiTenant,
+		rate.ID, rate.OrganizationID, rate.RatePerGram, rate.EffectiveDate,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update rate: %w", err)
@@ -159,8 +157,8 @@ func (r *metalRateRepository) Update(ctx context.Context, rate *domain.MetalRate
 	return nil
 }
 
-func (r *metalRateRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.Exec(ctx, queryDeleteRate, id)
+func (r *metalRateRepository) Delete(ctx context.Context, orgID, id uuid.UUID) error {
+	result, err := r.db.Exec(ctx, queryDeleteRateMultiTenant, id, orgID)
 	if err != nil {
 		return fmt.Errorf("failed to delete rate: %w", err)
 	}
