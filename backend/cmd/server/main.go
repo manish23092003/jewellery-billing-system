@@ -62,7 +62,10 @@ func main() {
 
 	// ── 4. Initialize Email Sender ───────────
 	var emailSender service.EmailSender
-	if cfg.ResendAPIKey != "" {
+	if cfg.BrevoAPIKey != "" {
+		emailSender = service.NewBrevoEmailSender(cfg)
+		log.Info().Msg("✓ Using Brevo API email sender")
+	} else if cfg.ResendAPIKey != "" {
 		emailSender = service.NewResendEmailSender(cfg)
 		log.Info().Msg("✓ Using Resend API email sender")
 	} else if cfg.IsSMTPConfigured() {
