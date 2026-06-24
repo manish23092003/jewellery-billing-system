@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -88,8 +89,8 @@ func (s *BrevoEmailSender) sendMail(toEmail, toName, subject, htmlBody string) e
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Brevo uses api-key header
-	req.Header.Set("api-key", s.apiKey)
+	// Brevo uses api-key header (trim any accidental spaces/newlines from user copy-paste)
+	req.Header.Set("api-key", strings.TrimSpace(s.apiKey))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
