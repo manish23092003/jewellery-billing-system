@@ -38,7 +38,9 @@ export default function RegisterPage() {
       toast.success("Account created successfully! Welcome aboard.");
       navigate("/");
     } catch (error: any) {
-      toast.error(error.message || "Registration failed");
+      // Extract the real server error message from the axios response
+      const message = error?.response?.data?.error || error?.message || "Registration failed";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
