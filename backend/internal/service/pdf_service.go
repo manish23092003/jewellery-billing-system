@@ -197,11 +197,11 @@ func (s *PDFService) GenerateInvoicePDF(bill *domain.Bill, settings *domain.Shop
 	m.AddRows(row.New(10).Add(col.New(12).Add(line.New(props.Line{Thickness: 0.5, Color: goldColor}))))
 
 	// FOOTER & QR CODE
-	appURL := os.Getenv("APP_URL")
-	if appURL == "" {
-		appURL = "http://localhost:5173"
+	appURL := os.Getenv("FRONTEND_URL")
+	if appURL == "" || strings.Contains(appURL, "localhost") || strings.Contains(appURL, "onrender.com") {
+		appURL = "https://jewellery-billing-system-psi.vercel.app"
 	}
-	verificationURL := fmt.Sprintf("%s/verify/%s", appURL, bill.VerificationToken.String())
+	verificationURL := fmt.Sprintf("%s/#/verify/%s", appURL, bill.VerificationToken.String())
 
 	m.AddRows(
 		row.New(40).Add(

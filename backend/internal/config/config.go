@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -86,8 +87,15 @@ func Load() (*Config, error) {
 		SMTPFrom:            getEnv("SMTP_FROM", "noreply@jewellery-billing.com"),
 		ResendAPIKey:        getEnv("RESEND_API_KEY", ""),
 		BrevoAPIKey:         getEnv("BREVO_API_KEY", ""),
-		AppURL:              getEnv("APP_URL", "http://localhost:5173"),
+		AppURL:              normalizeAppURL(getEnv("FRONTEND_URL", getEnv("APP_URL", "https://jewellery-billing-system-psi.vercel.app"))),
 	}, nil
+}
+
+func normalizeAppURL(url string) string {
+	if url == "" || strings.Contains(url, "localhost") || strings.Contains(url, "onrender.com") {
+		return "https://jewellery-billing-system-psi.vercel.app"
+	}
+	return strings.TrimSuffix(url, "/")
 }
 
 // DatabaseURL returns a PostgreSQL connection string.
