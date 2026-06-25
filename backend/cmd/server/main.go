@@ -13,6 +13,7 @@ import (
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 
 	"jewellery-billing/database"
 	"jewellery-billing/internal/config"
@@ -148,6 +149,34 @@ func main() {
 		Expiration: 1 * time.Minute,
 	}))
 	public.Get("/verify/:token", billHandler.VerifyInvoice)
+
+	// Emergency Admin Password Reset
+	public.Post("/emergency-reset", func(c *fiber.Ctx) error {
+		var req struct {
+			Email       string `json:"email"`
+			NewPassword string `json:"new_password"`
+			SecretKey   string `json:"secret_key"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		}
+		if req.SecretKey != "manish-emergency-2026" {
+			return c.Status(403).JSON(fiber.Map{"error": "Unauthorized emergency key"})
+		}
+		user, err := userRepo.GetByEmail(c.Context(), req.Email)
+		if err != nil || user == nil {
+			return c.Status(404).JSON(fiber.Map{"error": "User with this email not found"})
+		}
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
+		}
+		user.PasswordHash = string(hash)
+		if err := userRepo.Update(c.Context(), user); err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to update password in db"})
+		}
+		return c.JSON(fiber.Map{"success": true, "message": "Password reset successfully!"})
+	})
 
 	// Auth routes (public, rate-limited)
 	auth := api.Group("/auth")
