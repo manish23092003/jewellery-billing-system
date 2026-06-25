@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSettings } from "@/lib/settings.api";
 
 export default function Layout() {
-  const { user, organization, logout } = useAuth();
+  const { user, organization, logout, isLoading } = useAuth();
   const location = useLocation();
 
   const { data: settings } = useQuery({
@@ -15,6 +15,19 @@ export default function Layout() {
 
   const shopName = settings?.shop_name || organization?.business_name || "Jewellery Billing";
   const shopShortName = shopName.split(" ")[0] || "Jewellery";
+
+  // Wait until auth state is restored from localStorage before deciding to redirect.
+  // Without this, the page flashes to login and then back, causing an infinite loop.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-4 border-[#c6a962] border-t-transparent animate-spin" />
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
