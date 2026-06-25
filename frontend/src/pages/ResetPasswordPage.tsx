@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Gem, Loader2, Lock } from "lucide-react";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "@/schemas/password.schema";
 import { resetPassword } from "@/lib/auth.api";
@@ -9,9 +9,10 @@ import { toast } from "sonner";
 
 export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
   const navigate = useNavigate();
+
+  // Read token from URL - works for both BrowserRouter (?token=) and HashRouter (#/path?token=)
+  const token = new URLSearchParams(window.location.search || window.location.hash.split("?")[1] || "").get("token");
 
   useEffect(() => {
     if (!token) {

@@ -58,7 +58,7 @@ api.interceptors.response.use(
           localStorage.removeItem("user");
           localStorage.removeItem("organization");
           // Use hash-based path so HashRouter handles it correctly
-          window.location.href = "/login";
+          window.location.href = "/#/login";
         }
       } else {
         // No refresh token — redirect to login.
@@ -66,7 +66,7 @@ api.interceptors.response.use(
         localStorage.removeItem("user");
         localStorage.removeItem("organization");
         // BrowserRouter handles /login correctly via vercel.json rewrite
-        window.location.href = "/login";
+        window.location.href = "/#/login";
       }
     }
 
