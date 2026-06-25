@@ -28,7 +28,7 @@ func NewConsoleEmailSender(appURL string) *ConsoleEmailSender {
 }
 
 func (s *ConsoleEmailSender) SendVerificationEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/verify-email?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/#/verify-email?token=%s", s.appURL, token)
 	log.Info().
 		Str("to", to).
 		Str("name", name).
@@ -38,7 +38,7 @@ func (s *ConsoleEmailSender) SendVerificationEmail(to, name, token string) error
 }
 
 func (s *ConsoleEmailSender) SendPasswordResetEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/reset-password?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/#/reset-password?token=%s", s.appURL, token)
 	log.Info().
 		Str("to", to).
 		Str("name", name).
@@ -71,7 +71,7 @@ func NewSMTPEmailSender(cfg *config.Config) *SMTPEmailSender {
 }
 
 func (s *SMTPEmailSender) SendVerificationEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/verify-email?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/#/verify-email?token=%s", s.appURL, token)
 	subject := "Verify Your Email — Jewellery Billing"
 	body := fmt.Sprintf(`Hello %s,
 
@@ -90,7 +90,7 @@ Jewellery Billing Team`, name, link)
 }
 
 func (s *SMTPEmailSender) SendPasswordResetEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/reset-password?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/#/reset-password?token=%s", s.appURL, token)
 	subject := "Reset Your Password — Jewellery Billing"
 	body := fmt.Sprintf(`Hello %s,
 
