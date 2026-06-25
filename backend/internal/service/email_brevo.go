@@ -29,7 +29,7 @@ func NewBrevoEmailSender(cfg *config.Config) *BrevoEmailSender {
 }
 
 func (s *BrevoEmailSender) SendVerificationEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/#/verify-email?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/verify-email?token=%s", s.appURL, token)
 	subject := "Verify Your Email — Jewellery Billing"
 	htmlBody := fmt.Sprintf(`
 		<div style="font-family: sans-serif; padding: 20px;">
@@ -44,7 +44,7 @@ func (s *BrevoEmailSender) SendVerificationEmail(to, name, token string) error {
 }
 
 func (s *BrevoEmailSender) SendPasswordResetEmail(to, name, token string) error {
-	link := fmt.Sprintf("%s/#/reset-password?token=%s", s.appURL, token)
+	link := fmt.Sprintf("%s/reset-password?token=%s", s.appURL, token)
 	subject := "Reset Your Password — Jewellery Billing"
 	htmlBody := fmt.Sprintf(`
 		<div style="font-family: sans-serif; padding: 20px;">
