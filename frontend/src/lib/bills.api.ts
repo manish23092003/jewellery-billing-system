@@ -4,6 +4,7 @@ import type { APIResponse } from "@/types";
 export interface BillItem {
   id?: string;
   item_name: string;
+  hsn_code?: string;
   metal_type: string;
   purity: string;
   weight: number;
@@ -11,6 +12,7 @@ export interface BillItem {
   making_charge: number;
   gst_percentage: number;
   quantity: number;
+  charges?: { charge_name: string; amount: number }[];
   line_total?: number;
 }
 
@@ -28,6 +30,9 @@ export interface Bill {
 }
 
 export interface CreateBillRequest {
+  type?: string;
+  status?: string;
+  advance_amount?: number;
   invoice_date: string;
   customer_name: string;
   customer_phone: string;
@@ -35,6 +40,7 @@ export interface CreateBillRequest {
   notes: string;
   items: BillItem[];
   convert_from_id?: string;
+  old_gold_items?: any[];
 }
 
 export const getBills = async (): Promise<Bill[]> => {
