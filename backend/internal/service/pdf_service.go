@@ -186,9 +186,26 @@ func (s *PDFService) GenerateInvoicePDF(bill *domain.Bill, settings *domain.Shop
 		row.New(8).Add(
 			col.New(7), col.New(5).Add(text.New(fmt.Sprintf("Grand Total: Rs %.2f", bill.GrandTotal), props.Text{Top: 2, Align: align.Right, Style: fontstyle.Bold, Size: 12, Color: goldColor})),
 		),
-		row.New(6).Add(
-			col.New(7), col.New(5).Add(text.New(fmt.Sprintf("Advance/Paid: Rs %.2f", bill.AdvanceAmount), props.Text{Top: 2, Align: align.Right, Size: 10, Color: &props.Color{Red: 0, Green: 128, Blue: 0}})),
-		),
+	)
+
+	if len(bill.Payments) > 0 {
+		for _, pay := range bill.Payments {
+			pDate := pay.PaymentDate.Format("02-Jan-2006")
+			m.AddRows(
+				row.New(6).Add(
+					col.New(6), col.New(6).Add(text.New(fmt.Sprintf("Paid (%s): Rs %.2f", pDate, pay.Amount), props.Text{Top: 2, Align: align.Right, Size: 10, Color: &props.Color{Red: 0, Green: 128, Blue: 0}})),
+				),
+			)
+		}
+	} else {
+		m.AddRows(
+			row.New(6).Add(
+				col.New(7), col.New(5).Add(text.New(fmt.Sprintf("Advance/Paid: Rs %.2f", bill.AdvanceAmount), props.Text{Top: 2, Align: align.Right, Size: 10, Color: &props.Color{Red: 0, Green: 128, Blue: 0}})),
+			),
+		)
+	}
+
+	m.AddRows(
 		row.New(8).Add(
 			col.New(7), col.New(5).Add(text.New(fmt.Sprintf("Balance Due: Rs %.2f", bill.BalanceDue), props.Text{Top: 2, Align: align.Right, Style: fontstyle.Bold, Size: 11, Color: &props.Color{Red: 200, Green: 0, Blue: 0}})),
 		),
