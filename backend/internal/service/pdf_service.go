@@ -231,7 +231,6 @@ func (s *PDFService) GenerateInvoicePDF(bill *domain.Bill, settings *domain.Shop
 				text.New("Thank you for your business!", props.Text{Top: 5, Align: align.Left, Style: fontstyle.Italic, Size: 10, Color: goldColor}),
 				text.New("Scan QR code to verify this authentic invoice.", props.Text{Top: 12, Align: align.Left, Size: 9}),
 				text.New("Secured & Verified", props.Text{Top: 18, Align: align.Left, Style: fontstyle.Bold, Size: 9, Color: &props.Color{Red: 34, Green: 139, Blue: 34}}),
-				text.New(verificationURL, props.Text{Top: 24, Align: align.Left, Size: 7}),
 			),
 			// Right side: Signature (removed)
 			col.New(4),
